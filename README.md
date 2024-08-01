@@ -28,6 +28,10 @@ export enum BACKEND_CONFIG {
 
 ```
 
+## UI
+![alt text](<Screenshot 2024-07-31 at 1.30.32 pm.png>)
+
+
 ## Deployment
 You can deploy the application straight to AWS Amplify or using the new functionality via Amplify Sandboxes. 
 To know more about this please verify official documentation
