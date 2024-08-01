@@ -1,57 +1,66 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
+import { submitPromptFunction } from "../functions/submit-prompt/resource";
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any user authenticated via an API key can "create", "read",
-"update", and "delete" any "Todo" records.
-=========================================================================*/
-const schema = a.schema({
-  Todo: a
-    .model({
-      content: a.string(),
+export const schema = a.schema({
+  RetrievalResultLocation: a.customType({
+    s3Location: a.customType({
+      uri: a.string(),
+    }),
+    type: a.string(),
+    webLocation: a.customType({
+      url: a.string(),
+    }),
+  }),
+  RetrievedReferencesResponse: a.customType({
+    contenxt: a.customType({
+      text: a.string(),
+    }),
+    location: a.ref("RetrievalResultLocation"),
+    metadata: a.string(),
+  }),
+  GeneratedResponsePart: a.customType({
+    textResponsePart: a.customType({
+      span: a.customType({
+        end: a.integer(),
+        start: a.integer(),
+      }),
+      text: a.string(),
+    }),
+  }),
+  CitationResponse: a.customType({
+    generatedResponsePart: a.ref("GeneratedResponsePart"),
+    retrievedReferences: a.ref("RetrievedReferencesResponse").array(),
+  }),
+  PromptResponse: a.customType({
+    type: a.string(),
+    sessionId: a.string(),
+    systemMessageId: a.string(),
+    systemMessage: a.string(),
+    sourceAttributions: a.ref("CitationResponse").array(),
+  }),
+  submitPrompt: a
+    .query()
+    .arguments({
+      userId: a.string().required(),
+      prompt: a.string(),
+      messageId: a.string(),
+      sessionId: a.string(),
     })
-    .authorization((allow) => [allow.publicApiKey()]),
+    .returns(a.ref("PromptResponse"))
+    .handler(a.handler.function(submitPromptFunction))
+    .authorization((allow) => [allow.authenticated()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
-
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: "apiKey",
+    // This tells the data client in your app (generateClient())
+    // to sign API requests with the user authentication token.
+    defaultAuthorizationMode: "userPool",
     // API Key is used for a.allow.public() rules
     apiKeyAuthorizationMode: {
       expiresInDays: 30,
     },
   },
 });
-
-/*== STEP 2 ===============================================================
-Go to your frontend source code. From your client-side code, generate a
-Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
-
-Using JavaScript or Next.js React Server Components, Middleware, Server 
-Actions or Pages Router? Review how to generate Data clients for those use
-cases: https://docs.amplify.aws/gen2/build-a-backend/data/connect-to-API/
-=========================================================================*/
-
-/*
-"use client"
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>() // use this Data client for CRUDL requests
-*/
-
-/*== STEP 3 ===============================================================
-Fetch records from the database and use them in your frontend component.
-(THIS SNIPPET WILL ONLY WORK IN THE FRONTEND CODE FILE.)
-=========================================================================*/
-
-/* For example, in a React component, you can use this snippet in your
-  function's RETURN statement */
-// const { data: todos } = await client.models.Todo.list()
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>
